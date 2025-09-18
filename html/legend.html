@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>THE LEGEND - Ultimate Deltarune Recreation</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.min.js"></script>
+<style>
+body { font-family: sans-serif; text-align: center; margin-top: 50px; background: #111; color: #fff; }
+button { padding: 16px 32px; font-size: 18px; cursor: pointer; background: #222; color: #fff; border: none; border-radius: 6px; }
+button:hover { background: #555; }
+</style>
+</head>
+<body>
+<h1>THE LEGEND - Ultimate Deltarune</h1>
+<button id="play">Play / Pause</button>
+
+<script>
+// --- Tempo & timing ---
+const tempo = 140;
+const quarterNote = 60 / tempo;
+
+// --- Synth layers ---
+const lead = new Tone.Synth({ oscillator:{type:"square"}, envelope:{attack:0.01,decay:0.08,sustain:0.4,release:0.1} }).toDestination();
+const bass = new Tone.MonoSynth({ oscillator:{type:"square"}, filter:{type:"lowpass", Q:2}, envelope:{attack:0.01,decay:0.2,sustain:0.5,release:0.3} }).toDestination();
+const harmony = new Tone.Synth({ oscillator:{type:"triangle"}, envelope:{attack:0.02,decay:0.15,sustain:0.3,release:0.2} }).toDestination();
+
+// --- Percussion ---
+const kick = new Tone.MembraneSynth().toDestination();
+const snare = new Tone.NoiseSynth({ noise:{type:'white'}, envelope:{attack:0.001, decay:0.2, sustain:0} }).toDestination();
+const hihat = new Tone.MetalSynth({ frequency:400, envelope:{attack:0.001, decay:0.1, release:0.01}, harmonicity:5.1, modulationIndex:32, resonance:4000, octaves:1 }).toDestination();
+
+// --- Full song sections ---
+const sections = {
+  intro: {
+    lead:[["C5",0.25],["E5",0.25],["G5",0.5],["C6",0.5],["G5",0.25],["E5",0.25],["C5",0.5],["D5",0.25]],
+    bass:[["C3",0.5],["C3",0.5],["G2",0.5],["G2",0.5],["F2",0.5],["F2",0.5],["C3",0.5],["C3",0.5]],
+    harmony:[["E4",0.5],["G4",0.5],["B4",0.5],["C5",0.5],["G4",0.25],["E4",0.25],["C4",0.5],["D4",0.25]]
+  },
+  main: {
+    lead:[
+      ["F5",0.25],["A5",0.25],["C6",0.5],["F6",0.5],["C6",0.25],["A5",0.25],["F5",0.5],["G5",0.25],
+      ["B5",0.25],["D6",0.5],["B5",0.25],["G5",0.25]
+    ],
+    bass:[
+      ["F2",0.5],["F2",0.5],["C3",0.5],["C3",0.5],["G2",0.5],["G2",0.5],["C3",0.5],["C3",0.5]
+    ],
+    harmony:[
+      ["A4",0.25],["C5",0.25],["E5",0.5],["A5",0.5],["E5",0.25],["C5",0.25],["A4",0.5],["B4",0.25],
+      ["D5",0.25],["F5",0.5],["D5",0.25],["B4",0.25]
+    ]
+  },
+  fill:{
+    lead:[["D6",0.25],["C6",0.25],["B5",0.25],["C6",0.25],["D6",0.25],["E6",0.25]],
+    bass:[["C3",0.5],["G2",0.5],["F2",0.5],["C3",0.5],["G2",0.5],["C3",0.5]],
+    harmony:[["E5",0.5],["C5",0.5],["G4",0.5],["C5",0.5],["E5",0.25],["G5",0.25]]
+  }
+};
+
+// --- Percussion patterns ---
+const kickPattern = [1,0,0,0,1,0,0,0];
+const snarePattern = [0,0,1,0,0,0,1,0];
+const hihatPattern = [1,1,1,1,1,1,1,1];
+
+// --- Functions ---
+function playSequence(synth, sequence, startTime=0){
+  let time = Tone.now() + startTime;
+  for(const [note,dur] of sequence){
+    const velocity = 0.8 + Math.random()*0.2;
+    synth.triggerAttackRelease(note,dur*quarterNote,time,velocity);
+    time += dur*quarterNote;
+  }
+}
+
+function playPercussion(startTime=0){
+  for(let i=0;i<kickPattern.length;i++){
+    const t = Tone.now() + startTime + i*quarterNote;
+    if(kickPattern[i]) kick.triggerAttackRelease("C2","8n",t);
+    if(snarePattern[i]) snare.triggerAttackRelease("8n",t);
+    if(hihatPattern[i]) hihat.triggerAttackRelease("16n",t);
+  }
+}
+
+// --- Loop through sections for full-length playback ---
+let loopId;
+document.getElementById("play").addEventListener("click", async ()=>{
+  await Tone.start();
+  if(loopId){
+    Tone.Transport.stop();
+    Tone.Transport.cancel();
+    loopId = null;
+  } else {
+    const sectionOrder = ["intro","main","fill","main","fill","main","fill","main"]; // full track order
+    let current = 0;
+    loopId = Tone.Transport.scheduleRepeat(()=>{
+      const sec = sections[sectionOrder[current]];
+      playSequence(bass, sec.bass, 0);
+      playSequence(harmony, sec.harmony, 0);
+      playSequence(lead, sec.lead, 0);
+      playPercussion(0);
+      current = (current+1)%sectionOrder.length;
+    },"4m"); // loop each section every 4 measures
+    Tone.Transport.start();
+  }
+});
+</script>
+</body>
+</html>
