@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>THE LEGEND - NES-Style Player + WAV Export</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.27/build/Midi.min.js"></script>
+<style>
+body { font-family: sans-serif; text-align: center; margin-top: 50px; background: #111; color: #fff; }
+button { padding: 12px 24px; margin: 10px; font-size: 16px; cursor: pointer; border-radius: 6px; border: none; background: #222; color: #fff; }
+button:hover { background: #555; }
+</style>
+</head>
+<body>
+<h1>THE LEGEND - NES-Style Player + WAV Export</h1>
+<button id="play">Play THE LEGEND</button>
+<button id="export">Export WAV</button>
+
+<script>
+// Embedded MIDI file (base64-encoded)
+const midiBase64 = "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KH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpf4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dygAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpf4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dygAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpf4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dygAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpf4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dygAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpf4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dygAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpf4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dygAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpf4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dygAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpf4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dygAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAEpfwA3f4FvKQABKX93KQABKX93KQABKH+BbygAASh/dygAASh/dzcAACgAASl/gW8pAAEpf4FvKQABKH+BbygAASl/gW8pAAH/LwA="; 
+const midiArrayBuffer = Uint8Array.from(atob(midiBase64), c => c.charCodeAt(0)).buffer;
+let midiData = new Midi(midiArrayBuffer);
+let scheduledEvents = [];
+
+// Master gain + recorder
+const masterGain = new Tone.Gain(0.8).toDestination();
+const recorder = new Tone.Recorder();
+masterGain.connect(recorder);
+recorder.toDestination();
+
+async function scheduleTheLegendPlayback(){
+    scheduledEvents.forEach(id => Tone.Transport.clear(id));
+    scheduledEvents = [];
+
+    midiData.tracks.forEach((track, index)=>{
+        const bitcrusher = new Tone.BitCrusher(4);
+        const reverb = new Tone.Reverb({decay:0.3, wet:0.15});
+        reverb.generate();
+
+        let synth;
+        if(track.instrument.name.toLowerCase().includes("drum") || track.notes.length === 0){
+            synth = new Tone.MembraneSynth({pitchDecay:0.01, octaves:1, envelope:{attack:0.001, decay:0.1, sustain:0, release:0.05}});
+        } else if(index === 0){
+            synth = new Tone.Synth({oscillator:{type:"square"}, envelope:{attack:0.005, decay:0.1, sustain:0.3, release:0.1}});
+        } else if(index === 1){
+            synth = new Tone.MonoSynth({oscillator:{type:"square", modulationType:"square", phase:0, harmonicity:1.01}, filter:{Q:1, type:"lowpass"}, envelope:{attack:0.001, decay:0.15, sustain:0.5, release:0.2}});
+        } else {
+            synth = new Tone.Synth({oscillator:{type:"triangle"}, envelope:{attack:0.02, decay:0.1, sustain:0.2, release:0.1}});
+        }
+
+        // Connect chain: synth → bitcrusher → reverb → masterGain → recorder → destination
+        synth.connect(bitcrusher);
+        bitcrusher.connect(reverb);
+        reverb.connect(masterGain);
+
+        // Stereo panning
+        const panner = new Tone.Panner((index / midiData.tracks.length)*2-1).connect(masterGain);
+        synth.connect(panner);
+
+        // Schedule notes
+        track.notes.forEach(note=>{
+            const id = Tone.Transport.schedule(time=>{
+                synth.triggerAttackRelease(note.name, note.duration, time, note.velocity);
+            }, note.time);
+            scheduledEvents.push(id);
+        });
+    });
+}
+
+// Play button
+document.getElementById('play').addEventListener('click', async ()=>{
+    await Tone.start();
+    await scheduleTheLegendPlayback();
+    Tone.Transport.start("+0.1");
+    alert("Playing THE LEGEND!");
+});
+
+// WAV export button
+document.getElementById('export').addEventListener('click', async ()=>{
+    await Tone.start();
+    await scheduleTheLegendPlayback();
+    recorder.start();
+    Tone.Transport.start("+0.1");
+
+    const midiDuration = midiData.duration + 1; 
+    setTimeout(async ()=>{
+        Tone.Transport.stop();
+        const recording = await recorder.stop();
+        const url = URL.createObjectURL(recording);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "The_Legend_NES_Style.wav";
+        a.click();
+        alert("WAV export complete!");
+    }, midiDuration * 1000);
+});
+</script>
+</body>
+</html>
