@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FM Sound/Music (FMS) Player</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #playBtn { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>FM Sound/Music (FMS) Player</h1>
+  <input type="file" id="fileInput" accept=".fms">
+  <button id="playBtn" disabled>Play</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/tone"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dx7-synth-js"></script>
+  <script>
+    let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    let fmsData = null;
+    let synth = new DX7Synth(audioContext);
+
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      fmsData = await file.arrayBuffer();
+      document.getElementById('playBtn').disabled = false;
+    });
+
+    document.getElementById('playBtn').addEventListener('click', () => {
+      if (!fmsData) return;
+      synth.loadPatch(fmsData);
+      synth.triggerAttack();
+    });
+  </script>
+</body>
+</html>
