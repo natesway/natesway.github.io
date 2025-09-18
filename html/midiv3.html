@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>THE LEGEND MIDI NES-Style Player + WAV Export</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.27/build/Midi.min.js"></script>
+<style>
+body { font-family: sans-serif; text-align: center; margin-top: 50px; background: #111; color: #fff; }
+input, button { padding: 12px 24px; margin: 10px; font-size: 16px; }
+button { cursor: pointer; border-radius: 6px; border: none; background: #222; color: #fff; }
+button:hover { background: #555; }
+</style>
+</head>
+<body>
+<h1>THE LEGEND MIDI NES-Style Player + WAV Export</h1>
+<input type="file" id="midiFile" accept=".mid,.midi">
+<br>
+<button id="play">Play MIDI</button>
+<button id="export">Export WAV</button>
+
+<script>
+let midiData;
+let scheduledEvents = [];
+const masterGain = new Tone.Gain(0.8).toDestination();
+const recorder = new Tone.Recorder();
+masterGain.connect(recorder);
+recorder.toDestination();
+
+document.getElementById('midiFile').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const arrayBuffer = await file.arrayBuffer();
+    midiData = new Midi(arrayBuffer);
+    alert("MIDI loaded! Ready to play.");
+});
+
+async function scheduleMIDIPlayback(){
+    scheduledEvents.forEach(id => Tone.Transport.clear(id));
+    scheduledEvents = [];
+
+    midiData.tracks.forEach((track, index)=>{
+        let synth;
+
+        // NES-style effects
+        const bitcrusher = new Tone.BitCrusher(4).connect(masterGain); // 4-bit
+        const reverb = new Tone.Reverb({decay:0.3, wet:0.15}).connect(bitcrusher);
+
+        if(track.instrument.name.toLowerCase().includes("drum") || track.notes.length === 0){
+            synth = new Tone.MembraneSynth({
+                pitchDecay:0.01,
+                octaves:1,
+                envelope:{attack:0.001, decay:0.1, sustain:0, release:0.05}
+            }).connect(reverb);
+        } else if(index % 3 === 0){
+            synth = new Tone.Synth({
+                oscillator:{type:"square"},
+                envelope:{attack:0.005, decay:0.1, sustain:0.3, release:0.1}
+            }).connect(reverb);
+        } else if(index % 3 === 1){
+            synth = new Tone.MonoSynth({
+                oscillator:{type:"square", modulationType:"square", phase:0, harmonicity:1.01},
+                filter:{Q:1, type:"lowpass"},
+                envelope:{attack:0.001, decay:0.15, sustain:0.5, release:0.2}
+            }).connect(reverb);
+        } else {
+            synth = new Tone.Synth({
+                oscillator:{type:"triangle"},
+                envelope:{attack:0.02, decay:0.1, sustain:0.2, release:0.1}
+            }).connect(reverb);
+        }
+
+        // Stereo panning
+        const panner = new Tone.Panner((index / midiData.tracks.length)*2-1).connect(masterGain);
+        synth.connect(panner);
+
+        track.notes.forEach(note=>{
+            const id = Tone.Transport.schedule(time=>{
+                synth.triggerAttackRelease(note.name, note.duration, time, note.velocity);
+            }, note.time);
+            scheduledEvents.push(id);
+        });
+    });
+}
+
+document.getElementById('play').addEventListener('click', async ()=>{
+    if(!midiData) return alert("Please load a MIDI file first!");
+    await Tone.start();
+    await scheduleMIDIPlayback();
+    Tone.Transport.start();
+    alert("Playing MIDI in NES chiptune style!");
+});
+
+document.getElementById('export').addEventListener('click', async ()=>{
+    if(!midiData) return alert("Please load a MIDI file first!");
+    await Tone.start();
+    await scheduleMIDIPlayback();
+    
+    recorder.start();
+    Tone.Transport.start();
+    alert("Recording in progress...");
+
+    // Determine MIDI length
+    const midiDuration = midiData.duration + 1; // extra 1s to capture release
+    setTimeout(async ()=>{
+        Tone.Transport.stop();
+        const recording = await recorder.stop();
+        const url = URL.createObjectURL(recording);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "The_Legend_NES.wav";
+        a.click();
+        alert("WAV export complete!");
+    }, midiDuration * 1000);
+});
+</script>
+</body>
+</html>
